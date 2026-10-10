@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>우리집 자산</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* 색 토큰 — 차트 색은 dataviz 검증 팔레트 (validate_palette.js light/dark PASS) */
+  :root{
+    color-scheme:light;
+    --bg:#f9f9f7; --panel:#fcfcfb; --panel2:#f0efec; --line:#e1e0d9; --base:#c3c2b7;
+    --txt:#0b0b0b; --sub:#52514e; --muted:#898781; --ring:rgba(11,11,11,.10);
+    --accent:#2a78d6; --up:#d03b3b; --down:#1c5cab; --note-bg:#eef4fc; --note-line:#cde2fb;
+    --p1:#2a78d6; --p2:#eb6834;                                   /* 남편 · 아내 */
+    --s1:#1baf7a; --s2:#eda100; --s3:#e87ba4; --s4:#008300; --s5:#4a3aa7; --s6:#e34948; /* 종목 */
+    --other:#898781; --line2:#4a3aa7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#0d0d0d; --panel:#1a1a19; --panel2:#242422; --line:#2c2c2a; --base:#383835;
+      --txt:#ffffff; --sub:#c3c2b7; --muted:#898781; --ring:rgba(255,255,255,.10);
+      --accent:#3987e5; --up:#e66767; --down:#5598e7; --note-bg:#17202c; --note-line:#1c3a5e;
+      --p1:#3987e5; --p2:#d95926;
+      --s1:#199e70; --s2:#c98500; --s3:#d55181; --s4:#008300; --s5:#9085e9; --s6:#e66767;
+      --other:#6f6e69; --line2:#9085e9;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#0d0d0d; --panel:#1a1a19; --panel2:#242422; --line:#2c2c2a; --base:#383835;
+    --txt:#ffffff; --sub:#c3c2b7; --muted:#898781; --ring:rgba(255,255,255,.10);
+    --accent:#3987e5; --up:#e66767; --down:#5598e7; --note-bg:#17202c; --note-line:#1c3a5e;
+    --p1:#3987e5; --p2:#d95926;
+    --s1:#199e70; --s2:#c98500; --s3:#d55181; --s4:#008300; --s5:#9085e9; --s6:#e66767;
+    --other:#6f6e69; --line2:#9085e9;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:var(--bg); color:var(--txt); padding:24px 16px; line-height:1.5; -webkit-text-size-adjust:100%;}
+  button{font-family:inherit; color:inherit;}
+  .wrap{max-width:1200px; margin:0 auto;}
+  [hidden]{display:none !important;}
+  .muted{color:var(--sub); font-size:13px;}
+  .small{font-size:12px; color:var(--muted);}
+  .num{font-variant-numeric:tabular-nums;}
+  .up{color:var(--up);} .down{color:var(--down);}
+
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:20px;}
+  h1{font-size:22px; font-weight:700;}
+  .btn{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer;}
+  .btn:hover{border-color:var(--base);}
+
+  .grid{display:grid; gap:16px;}
+  .cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .cols-4{grid-template-columns:repeat(4,minmax(0,1fr));}
+  @media(max-width:960px){.cols-4{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:720px){.cols-2,.cols-4,.split{grid-template-columns:minmax(0,1fr) !important;}}
+  .card{background:var(--panel); border:1px solid var(--ring); border-radius:16px; padding:18px 20px; min-width:0;}
+  .card h3{font-size:13px; color:var(--sub); font-weight:600; margin-bottom:8px;}
+  .big{font-size:24px; font-weight:700;}
+  .xl{font-size:34px; font-weight:800; letter-spacing:-.5px;}
+  .sub-row{display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:8px; font-size:13px; color:var(--sub);}
+  .sec-title{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin:28px 0 12px;}
+  .sec-title h2{font-size:16px; font-weight:700;}
+  .note{background:var(--note-bg); border:1px solid var(--note-line); color:var(--sub); font-size:12px; padding:10px 14px; border-radius:10px; margin-top:14px;}
+  .warn{background:var(--panel2); border:1px solid var(--line); color:var(--sub); font-size:12px; padding:8px 12px; border-radius:10px; margin-bottom:14px;}
+  .dot{display:inline-block; width:10px; height:10px; border-radius:3px; flex:none;}
+  .tag{font-size:11px; padding:1px 7px; border-radius:6px; background:var(--panel2); color:var(--sub); margin-left:6px; font-weight:500; white-space:nowrap;}
+
+  .progress{height:8px; background:var(--panel2); border-radius:6px; overflow:hidden; margin-top:10px;}
+  .progress > span{display:block; height:100%; background:var(--accent); border-radius:6px;}
+  .hero{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:24px; align-items:center;}
+  .hero .pct{font-size:44px; font-weight:800; line-height:1.1;}
+  @media(max-width:720px){.hero{grid-template-columns:minmax(0,1fr);}}
+
+  /* 계좌 리스트 */
+  .person-head{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px;}
+  .person-head .nm{display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px;}
+  .acc{display:block; width:100%; text-align:left; background:none; border:none; border-bottom:1px solid var(--line); padding:12px 4px; cursor:pointer; border-radius:0;}
+  .acc:hover, .acc:focus-visible{background:var(--panel2); outline:none;}
+  .acc .top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .acc .nm{font-weight:600;} .acc .val{font-weight:700; white-space:nowrap;}
+  .acc .meta{display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); margin-top:2px;}
+  .bar{height:4px; background:var(--panel2); border-radius:4px; margin-top:8px; overflow:hidden;}
+  .bar > span{display:block; height:100%; border-radius:4px;}
+  .total-row{display:flex; justify-content:space-between; padding:12px 4px 0; font-weight:700;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{text-align:right; padding:9px 8px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{color:var(--muted); font-weight:600; font-size:12px;}
+  td{font-variant-numeric:tabular-nums;}
+  .scroll-x{overflow-x:auto;}
+
+  /* 포트폴리오 */
+  .seg{display:inline-flex; background:var(--panel2); border-radius:10px; padding:3px; gap:2px;}
+  .seg button{border:none; background:none; padding:6px 14px; border-radius:8px; font-size:13px; cursor:pointer; color:var(--sub);}
+  .seg button[aria-pressed="true"]{background:var(--panel); color:var(--txt); font-weight:700; box-shadow:0 0 0 1px var(--ring);}
+  .split{display:grid; grid-template-columns:minmax(0,280px) minmax(0,1fr); gap:24px; align-items:center;}
+  .donut-box{position:relative; width:100%; max-width:280px; aspect-ratio:1; margin:0 auto;}
+  .donut-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center;}
+  .legend-row{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .legend-row:last-child{border-bottom:none;}
+  .legend-row .l{display:flex; align-items:center; gap:8px; min-width:0;}
+  .legend-row .l span:last-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .legend-row .r{display:flex; gap:14px; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .legend-row .r .p{color:var(--sub); width:48px; text-align:right;}
+
+  /* 종목 행 (계좌 상세) */
+  .h-row{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .h-row:last-child{border-bottom:none;}
+  .h-row .l{display:flex; gap:10px; align-items:flex-start; min-width:0;}
+  .h-row .l .dot{margin-top:6px;}
+  .h-row .nm{font-weight:600;}
+  .h-row .mt{font-size:12px; color:var(--muted);}
+  .h-row .r{text-align:right; white-space:nowrap;}
+
+  dialog{margin:auto; border:none; border-radius:18px; padding:0; width:min(720px, calc(100vw - 32px)); max-height:calc(100vh - 48px);
+    background:var(--panel); color:var(--txt); box-shadow:0 0 0 1px var(--ring), 0 20px 60px rgba(0,0,0,.35);}
+  dialog::backdrop{background:rgba(0,0,0,.45);}
+  .dlg-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:20px 22px 0;}
+  .dlg-body{padding:12px 22px 22px;}
+  .x{border:none; background:var(--panel2); width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; flex:none;}
+
+  .kv{display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:7px 0; border-bottom:1px solid var(--line);}
+  .kv:last-child{border-bottom:none;}
+  .chart-box{position:relative; height:240px;}
+  .link{border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:6px; padding:3px 10px; font-size:13px; cursor:pointer;}
+
+  /* 잠금 화면 */
+  .lock{min-height:calc(100vh - 48px); display:flex; align-items:center; justify-content:center;}
+  .lock form{width:100%; max-width:360px; background:var(--panel); border:1px solid var(--ring); border-radius:18px; padding:28px 24px;}
+  .lock h1{margin-bottom:4px;}
+  .lock input[type=password]{width:100%; margin-top:18px; padding:12px 14px; font-size:16px; border-radius:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--txt); font-family:inherit;}
+  .lock input[type=password]:focus{outline:2px solid var(--accent); outline-offset:-1px;}
+  .lock label{display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:var(--sub);}
+  .lock .go{width:100%; margin-top:16px; padding:12px; font-size:15px; font-weight:700; border:none; border-radius:10px; background:var(--accent); color:#fff; cursor:pointer;}
+  .lock .go:disabled{opacity:.6; cursor:default;}
+  .lock .err{color:var(--up); font-size:13px; margin-top:10px; min-height:20px;}
+</style>
+</head>
+<body>
+
+<div id="lock" class="lock" hidden>
+  <form id="lock-form" autocomplete="on">
+    <h1>🔒 우리집 자산</h1>
+    <div class="muted">데이터는 암호화되어 있어요. 비밀번호는 이 기기에서만 쓰이고 어디로도 전송되지 않아요.</div>
+    <input type="text" name="username" value="asset-dashboard" autocomplete="username" hidden>
+    <input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password" required>
+    <label><input id="remember" type="checkbox" checked> 이 기기에서 기억하기</label>
+    <button class="go" id="go" type="submit">열기</button>
+    <div class="err" id="lock-err" role="alert"></div>
+  </form>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <header>
+    <div>
+      <h1>💰 우리집 자산</h1>
+      <div class="muted" id="meta"></div>
+    </div>
+    <button class="btn" id="lock-btn" type="button">잠그기</button>
+  </header>
+  <div class="warn" id="missing" hidden></div>
+
+  <!-- 히어로: 전체 순자산 vs 올해 목표 -->
+  <div class="card hero">
+    <div>
+      <h3>전체 순자산 (금융 + 부동산)</h3>
+      <div class="xl" id="nw"></div>
+      <div class="sub-row"><span id="goal-line"></span><span id="goal-gap"></span></div>
+      <div class="progress"><span id="goal-bar"></span></div>
+      <div class="note" id="goal-note"></div>
+    </div>
+    <div style="text-align:center;">
+      <div class="muted">목표 달성률</div>
+      <div class="pct" id="goal-pct"></div>
+    </div>
+  </div>
+
+  <!-- 요약 타일 -->
+  <div class="grid cols-4" style="margin-top:16px;" id="tiles"></div>
+
+  <!-- 금융자산: 부부 × 계좌 -->
+  <div class="sec-title"><h2>금융자산 — 계좌별</h2><span class="small">계좌를 누르면 보유 종목이 보여요</span></div>
+  <div class="grid cols-2" id="people"></div>
+
+  <!-- 계좌 유형별 -->
+  <div class="sec-title"><h2>계좌 유형별 합산</h2></div>
+  <div class="card scroll-x"><table id="type-table"></table></div>
+
+  <!-- 포트폴리오 -->
+  <div class="sec-title">
+    <h2>포트폴리오 — 종목별 비중</h2>
+    <div class="seg" id="scope" role="group" aria-label="범위"></div>
+  </div>
+  <div class="card split">
+    <div class="donut-box"><canvas id="donut" aria-label="종목별 비중 원형 차트" role="img"></canvas>
+      <div class="donut-center"><div class="small" id="donut-label"></div><div class="big" id="donut-total"></div></div></div>
+    <div id="legend"></div>
+  </div>
+
+  <!-- 부동산 -->
+  <div class="sec-title"><h2>부동산 (대출 자동 상환 반영)</h2></div>
+  <div class="card grid cols-2" style="gap:24px;">
+    <div>
+      <h3 id="re-name"></h3>
+      <div class="kv"><span>시세 (수동 입력)</span><b id="re-mv"></b></div>
+      <div class="kv"><span class="muted" id="re-interior"></span></div>
+      <div class="kv"><span>최초 대출</span><span id="re-spec"></span></div>
+      <div class="kv"><span>월 상환액 (원리금)</span><span id="re-pay"></span></div>
+      <div class="kv"><span>납입 경과</span><span id="re-cnt"></span></div>
+      <div class="kv"><span>누적 원금상환</span><span id="re-paid"></span></div>
+      <div class="kv"><span>잔여 대출</span><b id="re-loan"></b></div>
+      <div class="kv" style="font-size:15px;"><span><b>순자산</b></span><b id="re-net"></b></div>
+    </div>
+    <div>
+      <div class="note" style="margin-top:0;">매달 25일 상환. 매달 <b>원금</b>만큼 부채가 줄어 순자산이 늘어납니다.
+        시세만 가끔 holdings.json 에서 직접 업데이트하면 대출은 날짜 기준으로 자동 계산돼요.</div>
+      <div class="kv" style="margin-top:14px;"><span>1회차 원금 / 이자</span><span id="re-first"></span></div>
+      <div class="kv"><span>12개월 후 잔여대출</span><span id="re-bal12"></span></div>
+      <div class="kv" style="margin-top:14px;"><span>연도별 상환 스케줄</span>
+        <button class="link" id="sched-toggle" type="button" aria-expanded="false">상세보기 ▾</button></div>
+    </div>
+  </div>
+  <div id="sched-wrap" class="card" style="margin-top:16px;" hidden>
+    <h3>연도별 상환 스케줄 <span class="small">· 6개월 변동금리 (금리 바뀌면 holdings.json 의 rateChanges 에 입력)</span></h3>
+    <div class="note" style="margin-top:0;">
+      <b>장기주택저당차입금 이자상환 소득공제</b> 최대(연 1,800만 한도)를 받으려면 <b>'비거치식' 요건</b>으로
+      매년 <b>원금 <span id="ded-thr"></span></b>(= 차입금×70%÷상환연수) 이상을 갚아야 합니다. 원리금균등은 초반 원금 상환이 적어서
+      <b>차입 다음 해부터 부족분을 추가 중도상환</b>해야 충족됩니다. <b>차입연도는 면제</b>.
+      변동금리라 부족분은 매년 달라지니, 매년 12/31 전에 그해 갚은 원금을 확인해 모자란 만큼만 더 갚으면 됩니다.
+    </div>
+    <div class="scroll-x"><table id="sched-table">
+      <thead><tr><th>연도</th><th>적용 금리</th><th>정규 원금</th><th>이자</th><th>추가 중도상환</th><th>연 합계</th><th>연말 잔여대출</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="kv" style="margin-top:12px; font-size:14px;"><span>추가 중도상환 합계 (현재 금리 기준)</span><b id="sched-prepay-sum"></b></div>
+  </div>
+
+  <!-- 추이 -->
+  <div class="sec-title"><h2>추이</h2><span class="small">월말 기준 · 이번 달은 오늘 값</span></div>
+  <div class="grid cols-2">
+    <div class="card"><h3>순자산</h3><div class="chart-box"><canvas id="trend-nw"></canvas></div></div>
+    <div class="card"><h3>금융자산</h3><div class="chart-box"><canvas id="trend-fin"></canvas></div></div>
+    <div class="card"><h3>부동산 순자산</h3><div class="chart-box"><canvas id="trend-re"></canvas></div></div>
+    <div class="card"><h3>부채 (잔여 대출)</h3><div class="chart-box"><canvas id="trend-debt"></canvas></div></div>
+  </div>
+
+  <p class="small" style="margin-top:24px;">※ data/holdings.json 기준. 보유내역을 고쳐 push 하면 GitHub Actions 가 시세를 반영해 다시 배포합니다.</p>
+</div>
+
+<dialog id="acc-dlg" aria-labelledby="dlg-title">
+  <div class="dlg-head">
+    <div>
+      <div class="small" id="dlg-sub"></div>
+      <div class="big" id="dlg-title"></div>
+      <div class="muted" id="dlg-meta"></div>
+    </div>
+    <button class="x" type="button" id="dlg-close" aria-label="닫기">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div class="split" id="dlg-split" style="grid-template-columns:minmax(0,200px) minmax(0,1fr);">
+      <div class="donut-box" id="dlg-donut-box" style="max-width:200px;"><canvas id="dlg-donut" role="img" aria-label="계좌 종목 비중"></canvas></div>
+      <div id="dlg-list"></div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* ================= 유틸 ================= */
+const $ = s => document.querySelector(s);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/** 원 → "1억 2,345만" / "8,293만" / "5,000원" */
+function fmt(won){
+  if (won == null) return '-';
+  const neg = won < 0, a = Math.abs(won), m = Math.round(a / 1e4);
+  let s;
+  if (m >= 10000){ const e = Math.floor(m / 10000), r = m % 10000; s = `${e}억${r ? ' ' + r.toLocaleString() + '만' : ''}`; }
+  else if (m > 0) s = `${m.toLocaleString()}만`;
+  else s = `${Math.round(a).toLocaleString()}원`;
+  return (neg ? '-' : '') + s;
+}
+function delta(v){  // 국내 관례: 상승 빨강 ▲ / 하락 파랑 ▼ (화살표로 색 단독 의존 회피)
+  if (v == null) return '';
+  if (v === 0) return '<span class="small">0.00%</span>';
+  return `<span class="${v > 0 ? 'up' : 'down'}">${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(2)}%</span>`;
+}
+function money(v, currency){
+  if (currency === 'USD') return `$${v.toLocaleString(undefined,{maximumFractionDigits:2})}`;
+  return `₩${Math.round(v).toLocaleString()}`;
+}
+const qty = h => `${h.shares.toLocaleString(undefined,{maximumFractionDigits:8})}${h.unit === '주' ? '주' : ' ' + h.unit}`;
+
+/* ================= 복호화 ================= */
+const STORE_KEY = 'asset-dashboard-key';
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64e = buf => { let s = ''; new Uint8Array(buf).forEach(b => s += String.fromCharCode(b)); return btoa(s); };
+let BLOB = null;
+
+async function deriveKey(pw, blob){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:b64d(blob.salt), iterations:blob.iter, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, true, ['decrypt']);
+}
+async function decryptWith(key, blob){
+  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(blob.iv)}, key, b64d(blob.ct));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+function readSaved(){ try { return JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e){ return null; } }
+function writeSaved(v){ try { localStorage.setItem(STORE_KEY, JSON.stringify(v)); } catch(e){} }
+function clearSaved(){ try { localStorage.removeItem(STORE_KEY); } catch(e){} }
+
+function showLock(msg){
+  $('#app').hidden = true; $('#lock').hidden = false;
+  $('#lock-err').textContent = msg || '';
+  $('#pw').focus();
+}
+
+async function boot(){
+  try {
+    const r = await fetch(`data.enc.json?v=${Date.now()}`, {cache:'no-store'});  // Pages CDN 캐시(max-age=600) 우회
+    if (!r.ok) throw new Error(r.status);
+    BLOB = await r.json();
+  } catch(e){ showLock('데이터를 불러오지 못했어요. 잠시 후 새로고침 해주세요.'); $('#go').disabled = true; return; }
+
+  const saved = readSaved();
+  if (saved && saved.salt === BLOB.salt && saved.iter === BLOB.iter){
+    try {
+      const key = await crypto.subtle.importKey('raw', b64d(saved.k), 'AES-GCM', false, ['decrypt']);
+      return openApp(await decryptWith(key, BLOB));
+    } catch(e){ clearSaved(); }   // 비밀번호가 바뀐 경우
+  }
+  showLock();
+}
+
+$('#lock-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const go = $('#go'); go.disabled = true; go.textContent = '여는 중…'; $('#lock-err').textContent = '';
+  try {
+    const key = await deriveKey($('#pw').value, BLOB);
+    const data = await decryptWith(key, BLOB);
+    if ($('#remember').checked) writeSaved({salt:BLOB.salt, iter:BLOB.iter, k:b64e(await crypto.subtle.exportKey('raw', key))});
+    $('#pw').value = '';
+    openApp(data);
+  } catch(e){
+    $('#lock-err').textContent = '비밀번호가 맞지 않아요.';
+    $('#pw').select();
+  } finally { go.disabled = false; go.textContent = '열기'; }
+});
+$('#lock-btn').onclick = () => { clearSaved(); location.reload(); };
+
+/* ================= 렌더 ================= */
+let D = null, scope = 'all';
+const charts = {};
+const PERSON_VAR = ['--p1', '--p2'];
+const SYMBOL_VARS = ['--s1','--s2','--s3','--s4','--s5','--s6'];
+let personColor = {}, symbolSlot = {};
+
+function openApp(data){
+  D = data;
+  $('#lock').hidden = true; $('#app').hidden = false;
+  // 색은 엔티티에 고정: 사람 = 순서대로, 종목 = 부부 합산 상위 6개 (그 외는 '기타'). 범위를 바꿔도 색 불변.
+  D.people.forEach((p, i) => personColor[p.id] = PERSON_VAR[i % PERSON_VAR.length]);
+  symbolSlot = assignSlots(D.slices);
+  render();
+}
+const pColor = id => css(personColor[id] || '--muted');
+const sColor = (key, slots = symbolSlot) => slots[key] ? css(slots[key]) : css('--other');
+/** 값 내림차순 상위 6개에 종목 색 슬롯 배정 (그 외는 '기타') */
+function assignSlots(slices){
+  const m = {};
+  [...slices].sort((a, b) => b.value - a.value).slice(0, SYMBOL_VARS.length).forEach((x, i) => m[x.key] = SYMBOL_VARS[i]);
+  return m;
+}
+
+function render(){
+  const s = D.summary;
+  $('#meta').textContent = `기준일 ${D.asOf} · 시세 ${D.pricesUpdatedAt || '-'}${D.fx ? ` · $1 = ₩${D.fx.toLocaleString()}` : ''}`;
+  const miss = $('#missing');
+  miss.hidden = !D.missing.length;
+  miss.textContent = `⚠️ 시세를 못 받은 종목 (직전 값 사용): ${D.missing.join(', ')}`;
+
+  /* 히어로 */
+  $('#nw').textContent = fmt(s.netWorth);
+  $('#goal-line').innerHTML = `${s.goalYear}년 목표 <b>${s.goalEok.toFixed(2)}억</b>`;
+  $('#goal-gap').textContent = s.goalGap > 0 ? `남은 금액 ${fmt(s.goalGap)}` : `목표 초과 ${fmt(-s.goalGap)}`;
+  $('#goal-bar').style.width = Math.min(s.goalPct, 100) + '%';
+  $('#goal-pct').textContent = s.goalPct.toFixed(1) + '%';
+  const g = s.goalBase;
+  $('#goal-note').textContent = `목표 공식: ${g.baseAmountEok}억 × ${(1 + g.inflation).toFixed(2)}^(${s.goalYear}−${g.baseYear}) = ${s.goalEok.toFixed(2)}억. 매년 물가 ${Math.round(g.inflation * 100)}% 반영.`;
+
+  /* 타일 */
+  const tiles = [
+    {t:'금융자산', v:s.fin, sub:`절세계좌 <b>${fmt(s.taxAdv)}</b> · 그 외 <b>${fmt(s.general)}</b>`},
+    ...D.people.map(p => ({t:`<span class="dot" style="background:${pColor(p.id)}"></span> ${esc(p.name)} 금융자산`, v:p.total,
+      sub:`계좌 ${p.accounts.length}개 · 금융자산의 ${s.fin ? (p.total / s.fin * 100).toFixed(1) : 0}%`})),
+    {t:'부동산 순자산', v:s.reNet, sub:`시세 <b>${fmt(s.reMarket)}</b> · 대출 <b>${fmt(s.loanBal)}</b>`},
+  ];
+  $('#tiles').innerHTML = tiles.map(x => `<div class="card"><h3 style="display:flex;align-items:center;gap:6px;">${x.t}</h3>
+    <div class="big">${fmt(x.v)}</div><div class="sub-row"><span>${x.sub}</span></div></div>`).join('');
+
+  /* 부부 × 계좌 */
+  $('#people').innerHTML = D.people.map(p => `<div class="card">
+    <div class="person-head"><div class="nm"><span class="dot" style="background:${pColor(p.id)}"></span>${esc(p.name)}</div>
+      <div class="big">${fmt(p.total)}</div></div>
+    ${p.accounts.map(a => `<button class="acc" type="button" data-p="${esc(p.id)}" data-a="${esc(a.id)}">
+      <div class="top"><span class="nm">${esc(a.name)}</span><span class="val">${fmt(a.total)}</span></div>
+      <div class="meta"><span>${[a.broker, a.holdings.length ? `종목 ${a.holdings.length}개` : '', a.savings ? `${a.savings.paid}/${a.savings.months}회 · 만기 ${a.savings.maturity.slice(0, 7).replace('-', '.')}` : a.cash ? `현금 ${fmt(a.cash)}` : ''].filter(Boolean).map(esc).join(' · ')}</span>
+        <span>${a.pnlPct != null ? '수익률 ' + delta(a.pnlPct) + ' · ' : ''}${a.weight}%</span></div>
+      <div class="bar"><span style="width:${a.weight}%;background:${pColor(p.id)}"></span></div>
+    </button>`).join('')}
+    <div class="total-row"><span>합계</span><span>${fmt(p.total)}</span></div>
+  </div>`).join('');
+  document.querySelectorAll('.acc').forEach(b => b.onclick = () => openAccount(b.dataset.p, b.dataset.a));
+
+  /* 계좌 유형별 */
+  $('#type-table').innerHTML = `<thead><tr><th>계좌 유형</th>${D.people.map(p => `<th>${esc(p.name)}</th>`).join('')}<th>합계</th><th>비중</th></tr></thead>
+    <tbody>${D.byType.map(t => `<tr><td>${esc(t.type)}</td>${D.people.map(p => `<td>${t.byPerson[p.id] ? fmt(t.byPerson[p.id]) : '<span class="small">-</span>'}</td>`).join('')}
+      <td><b>${fmt(t.total)}</b></td><td class="muted">${s.fin ? (t.total / s.fin * 100).toFixed(1) : 0}%</td></tr>`).join('')}
+    <tr><td><b>합계</b></td>${D.people.map(p => `<td><b>${fmt(p.total)}</b></td>`).join('')}<td><b>${fmt(s.fin)}</b></td><td></td></tr></tbody>`;
+
+  /* 포트폴리오 범위 버튼 */
+  const scopes = [{id:'all', name:'부부 합산'}, ...D.people.map(p => ({id:p.id, name:p.name}))];
+  $('#scope').innerHTML = scopes.map(x => `<button type="button" data-s="${esc(x.id)}" aria-pressed="${x.id === scope}">${esc(x.name)}</button>`).join('');
+  document.querySelectorAll('#scope button').forEach(b => b.onclick = () => { scope = b.dataset.s; render(); });
+  renderPortfolio();
+
+  renderRealEstate();
+  renderTrends();
+}
+
+/** slices → 원형 차트 데이터: 색 있는 종목은 개별, 나머지는 '기타'로 접기 */
+function donutData(slices, slots = symbolSlot){
+  const shown = slices.filter(x => slots[x.key]);
+  const rest = slices.filter(x => !slots[x.key]).reduce((a, x) => a + x.value, 0);
+  const items = shown.map(x => ({label:x.name, value:x.value, color:sColor(x.key, slots)}));
+  if (rest > 0) items.push({label:'기타', value:rest, color:css('--other')});
+  return items;
+}
+
+function drawDonut(id, items){
+  if (charts[id]) charts[id].destroy();
+  const total = items.reduce((a, x) => a + x.value, 0);
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'doughnut',
+    data:{labels:items.map(x => x.label), datasets:[{data:items.map(x => x.value), backgroundColor:items.map(x => x.color),
+      borderColor:css('--panel'), borderWidth:2, hoverOffset:6}]},
+    options:{cutout:'64%', maintainAspectRatio:false, animation:{duration:300},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => ` ${c.label}: ${fmt(c.raw)} (${(c.raw / total * 100).toFixed(1)}%)`}}}}
+  });
+}
+
+function renderPortfolio(){
+  const p = D.people.find(x => x.id === scope);
+  const slices = p ? p.slices : D.slices;
+  const total = slices.reduce((a, x) => a + x.value, 0);
+  $('#donut-label').textContent = p ? `${p.name} 금융자산` : '부부 합산';
+  $('#donut-total').textContent = fmt(total);
+  drawDonut('donut', donutData(slices));
+  $('#legend').innerHTML = slices.map(x => `<div class="legend-row">
+      <div class="l"><span class="dot" style="background:${sColor(x.key)}"></span><span>${esc(x.name)}</span></div>
+      <div class="r"><span>${fmt(x.value)}</span><span class="p">${x.pct}%</span></div></div>`).join('')
+    || '<div class="muted">보유 종목이 없어요.</div>';
+}
+
+function openAccount(pid, aid){
+  const p = D.people.find(x => x.id === pid), a = p.accounts.find(x => x.id === aid);
+  $('#dlg-sub').textContent = `${p.name} · ${a.type}${a.broker ? ' · ' + a.broker : ''}`;
+  $('#dlg-title').textContent = `${a.name}  ${fmt(a.total)}`;
+  const meta = [`${p.name} 금융자산의 ${a.weight}%`];
+  if (a.principal) meta.push(`납입원금 ${fmt(a.principal)} · 평가손익 ${fmt(a.pnl)} ${delta(a.pnlPct)}`);
+  else if (a.cost) meta.push(`매입 ${fmt(a.cost)} · 평가손익 ${fmt(a.pnl)} ${delta(a.pnlPct)}${a.costCoverage ? '' : ' (평단 입력 종목만)'}`);
+  if (a.savings){ const v = a.savings;
+    meta.push(`월 ${fmt(v.monthly)} · ${v.paid}/${v.months}회 납입 · 만기 ${v.maturity.replace(/-/g, '.')} (만기 원금 ${fmt(v.target)}, 이자 별도)`); }
+  if (a.memo) meta.push(esc(a.memo));
+  $('#dlg-meta').innerHTML = meta.join(' · ');
+
+  const slices = a.holdings.map(h => ({key:h.symbol || 'name:' + h.name, name:h.name, value:h.value}));
+  if (a.cash) slices.push({key:'__cash__', name:a.savings ? '적금 납입원금' : '현금·예수금', value:a.cash});
+  // 계좌 상세는 독립된 창 + 바로 옆 범례라, 그 계좌 안에서 색을 다시 배정한다 (부부 합산 기준이면 대부분 '기타'가 됨)
+  const live = slices.filter(x => x.value > 0), slots = assignSlots(live);
+  const items = donutData(live, slots);
+  const showDonut = items.length >= 2;   // 조각 1개짜리 원형은 그리지 않음
+  $('#dlg-donut-box').hidden = !showDonut;
+  $('#dlg-split').style.gridTemplateColumns = showDonut ? '' : 'minmax(0,1fr)';
+  if (showDonut) drawDonut('dlg-donut', items);
+
+  const rows = a.holdings.map(h => {
+    const key = h.symbol || 'name:' + h.name;
+    let mt;
+    if (h.manual) mt = h.stale ? '<span class="tag" style="margin:0">시세 없음</span>' : '수동 입력';
+    else mt = `${qty(h)} · ${money(h.price, h.currency)} ${delta(h.change)}`;
+    const pnl = h.pnl != null ? `<div class="mt">평단 ${money(h.avg, h.currency)} · 손익 ${fmt(h.pnl)} ${delta(h.pnlPct)}</div>` : '';
+    return `<div class="h-row"><div class="l"><span class="dot" style="background:${sColor(key, slots)}"></span>
+        <div><div class="nm">${esc(h.name)}</div><div class="mt">${mt}</div>${pnl}${h.memo ? `<div class="mt">${esc(h.memo)}</div>` : ''}</div></div>
+      <div class="r"><div class="nm">${fmt(h.value)}</div><div class="mt">${h.weight}%</div></div></div>`;
+  });
+  if (a.cash) rows.push(`<div class="h-row"><div class="l"><span class="dot" style="background:${sColor('__cash__', slots)}"></span>
+      <div><div class="nm">${a.savings ? '적금 납입원금' : '현금·예수금'}</div></div></div>
+      <div class="r"><div class="nm">${fmt(a.cash)}</div><div class="mt">${a.total ? (a.cash / a.total * 100).toFixed(1) : 0}%</div></div></div>`);
+  $('#dlg-list').innerHTML = rows.join('') || '<div class="muted">보유 종목이 없어요.</div>';
+  $('#acc-dlg').showModal();
+}
+$('#dlg-close').onclick = () => $('#acc-dlg').close();
+$('#acc-dlg').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+function renderRealEstate(){
+  const R = D.realEstate, L = R.loan, sp = R.loanSpec, s = D.summary;
+  $('#re-name').textContent = R.name;
+  $('#re-mv').textContent = fmt(R.marketValue);
+  $('#re-interior').textContent = R.interiorAdd ? `└ 인테리어 가산 ${fmt(R.interiorAdd)} 포함` : '';
+  $('#re-spec').textContent = `${fmt(sp.principal)} · ${sp.months / 12}년 · ${(sp.annualRate * 100).toFixed(2)}% 원리금균등`;
+  $('#re-pay').textContent = (L.M / 1e4).toFixed(1) + '만';
+  $('#re-cnt').textContent = `${L.k}회 / ${L.n}회`;
+  $('#re-paid').textContent = fmt(L.paid);
+  $('#re-loan').textContent = fmt(L.bal);
+  $('#re-net').textContent = fmt(s.reNet);
+  $('#re-first').textContent = `${(L.firstPrincipal / 1e4).toFixed(1)}만 / ${(L.firstInterest / 1e4).toFixed(1)}만`;
+  $('#re-bal12').textContent = '약 ' + fmt(L.balAfter12);
+
+  const sched = R.loanSchedule || [], cur = Number(D.asOf.slice(0, 4));
+  const thr = sched.find(y => y.dedThreshold > 0);
+  $('#ded-thr').textContent = thr ? fmt(thr.dedThreshold) : '-';
+  $('#sched-table tbody').innerHTML = sched.map(y => {
+    const rate = y.rates.map(r => (r * 100).toFixed(2) + '%').join(' → ');
+    const prepay = y.prepay > 0 ? `<b>+${fmt(y.prepay)}</b>` : `<span class="muted">${y.dedThreshold === 0 ? '면제' : '-'}</span>`;
+    return `<tr${y.year === cur ? ' style="background:var(--panel2)"' : ''}><td>${y.year}${y.year === cur ? ' <span class="small">(올해)</span>' : ''}</td>
+      <td>${rate}</td><td>${fmt(y.principal)}</td><td>${fmt(y.interest)}</td><td>${prepay}</td><td><b>${fmt(y.total)}</b></td><td>${fmt(y.endBalance)}</td></tr>`;
+  }).join('');
+  const sum = sched.reduce((a, y) => a + y.prepay, 0);
+  $('#sched-prepay-sum').textContent = sum > 0 ? fmt(sum) : '없음';
+}
+$('#sched-toggle').onclick = () => {
+  const w = $('#sched-wrap'), b = $('#sched-toggle');
+  w.hidden = !w.hidden; b.setAttribute('aria-expanded', String(!w.hidden));
+  b.textContent = w.hidden ? '상세보기 ▾' : '접기 ▴';
+};
+
+/** Y축 눈금: 간격이 작으면 소수 자릿수를 늘려 '6.0억 6.0억' 같은 중복 방지 */
+function eokTick(v, i, ticks){
+  const step = ticks.length > 1 ? Math.abs(ticks[1].value - ticks[0].value) : 1e8;
+  const d = step >= 1e8 ? 0 : step >= 1e7 ? 1 : step >= 1e6 ? 2 : 3;
+  return (v / 1e8).toFixed(d) + '억';
+}
+
+function lineChart(id, labels, series){
+  if (charts[id]) charts[id].destroy();
+  const multi = series.length > 1;
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'line',
+    data:{labels, datasets:series.map(x => ({label:x.label, data:x.data, borderColor:x.color, backgroundColor:x.color + '1f',
+      fill:!multi, borderWidth:2, cubicInterpolationMode:'monotone', pointRadius:4, pointHoverRadius:6, pointBackgroundColor:x.color,
+      pointBorderColor:css('--panel'), pointBorderWidth:2, spanGaps:false}))},
+    options:{maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:multi, labels:{color:css('--sub'), boxWidth:10, boxHeight:10, padding:10, font:{size:11}}},
+        tooltip:{callbacks:{label:c => ` ${c.dataset.label}: ${fmt(c.raw)}`}}},
+      scales:{y:{ticks:{color:css('--muted'), callback:eokTick}, grid:{color:css('--line')}, border:{display:false}},
+              x:{ticks:{color:css('--muted')}, grid:{display:false}, border:{color:css('--base')}}}}
+  });
+}
+
+function renderTrends(){
+  const T = D.trends, ink = css('--sub');
+  lineChart('trend-nw', T.labels, [{label:'순자산', data:T.netWorth, color:ink}]);
+  lineChart('trend-fin', T.labels, [{label:'부부 합산', data:T.fin, color:ink},
+    ...D.people.map(p => ({label:p.name, data:T.byPerson[p.id], color:pColor(p.id)}))]);
+  lineChart('trend-re', T.labels, [{label:'순자산(인테리어 제외)', data:T.reNetBase, color:ink},
+    {label:'인테리어 포함', data:T.reNetWithInterior, color:css('--line2')}]);
+  lineChart('trend-debt', T.labels, [{label:'잔여 대출', data:T.debt, color:ink}]);
+}
+
+// OS 다크/라이트 전환 시 차트 색 다시 칠하기
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (D) render(); });
+
+boot();
+</script>
+</body>
+</html>
